@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Small logo next to the artist on the cover page; replace with your app's. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M54,0a54,54 0,1 0,0.1 0z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M62,34v27.1c-1.5,-0.7 -3.2,-1.1 -5,-1.1c-6.1,0 -11,4.5 -11,10s4.9,10 11,10s11,-4.5 11,-10V44h10v-10H62z" />
+</vector>

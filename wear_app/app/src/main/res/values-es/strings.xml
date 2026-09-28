@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="queue_title">Fila de reproducción</string>
+    <string name="not_connected">Abre la app de música en tu teléfono</string>
+    <string name="nothing_playing">Nada en reproducción</string>
+    <string name="no_lyrics">Sin letra</string>
+    <string name="now_playing">Reproduciendo %1$s</string>
+    <string name="sleep_timer">Temporizador</string>
+    <string name="sleep_timer_off">Desactivar</string>
+    <string name="minutes">%1$d min</string>
+    <string name="cancel">Cancelar</string>
+    <string name="search_prompt">¿Qué quieres escuchar?</string>
+    <string name="no_results">Sin resultados</string>
+    <string name="empty_folder">Vacío</string>
+    <string name="your_library">Tu biblioteca</string>
+    <string name="nothing_recent">Aún no hay nada aquí</string>
+    <string name="add_to_playlist">Agregar a playlist</string>
+    <string name="go_to_album">Ir al álbum</string>
+    <string name="go_to_artist">Ir al artista</string>
+    <string name="artist_radio">Mezcla del artista</string>
+    <string name="added_to">Agregada a %1$s</string>
+    <string name="no_playlists">No tienes playlists</string>
+    <string name="shuffle_mode">Modo aleatorio</string>
+    <string name="songs">Canciones</string>
+    <string name="song_count">%1$d canciones</string>
+    <string name="song_count_minutes">%1$d canciones · %2$d min</string>
+    <string name="settings">Configuración</string>
+    <string name="setting_touch_scroll">Desplazamiento táctil</string>
+    <string name="setting_touch_scroll_summary">Desliza las listas con el dedo además del bisel (la letra, solo con el bisel)</string>
+    <string name="app_version">Versión %1$s</string>
+    <string name="double_tap_to_skip">Toca dos veces para saltar</string>
+    <string name="play_on">Reproducir en</string>
+    <string name="output_auto">Automático</string>
+    <string name="this_phone">Este teléfono</string>
+    <string name="more_on_phone">Más en el teléfono</string>
+</resources>

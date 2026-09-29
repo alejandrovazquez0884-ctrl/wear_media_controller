@@ -3,6 +3,7 @@
     <!-- app_name comes from wear_app/gradle.properties (wearAppName). -->
     <string name="queue_title">Queue</string>
     <string name="not_connected">Open the music app on your phone</string>
+    <string name="connecting">Connecting…</string>
     <string name="nothing_playing">Nothing playing</string>
     <string name="no_lyrics">No lyrics</string>
     <string name="now_playing">Playing %1$s</string>

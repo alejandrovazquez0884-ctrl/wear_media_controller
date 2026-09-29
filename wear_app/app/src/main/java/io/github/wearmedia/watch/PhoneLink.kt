@@ -21,6 +21,8 @@ import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -136,7 +138,8 @@ sealed interface Lyrics {
     data class None(override val mediaId: String) : Lyrics
 }
 
-enum class LinkStatus { CONNECTING, CONNECTED, NO_PHONE }
+/** [APP_CLOSED]: the phone is there, but the music app didn't answer (closed or force-stopped). */
+enum class LinkStatus { CONNECTING, CONNECTED, NO_PHONE, APP_CLOSED }
 
 /** Talks to the music app on the phone (through the wear_media_controller plugin) over the Wearable Data Layer. */
 class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageClient.OnMessageReceivedListener {
@@ -186,6 +189,10 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
 
     private var artId: String? = null
 
+    /** When the phone app last sent its state; a request unanswered for a while means it's gone. */
+    private var lastStateAt = 0L
+    private var answerWatch: Job? = null
+
     /** Until then, the phone's reported volume is older than the watch's own changes and is ignored. */
     private var volumeHeldUntil = 0L
     private val pendingPages = mutableSetOf<Int>()
@@ -194,20 +201,33 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
     fun start() {
         dataClient.addListener(this)
         messageClient.addListener(this)
-        scope.launch {
-            try {
-                val items = dataClient.dataItems.await()
-                items.forEach { item ->
-                    if (item.uri.path == Protocol.PATH_NOW_PLAYING) {
-                        applyNowPlaying(DataMapItem.fromDataItem(item).dataMap)
-                    }
-                }
-                items.release()
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to read cached state", e)
-            }
-            send(Protocol.Cmd.REQUEST_STATE)
+        // No cached state: it may be from an app that was force-stopped since. Only what the
+        // phone app answers now is shown ("connecting" until then).
+        requestState()
+    }
+
+    /** Asks the phone app for its state; if it doesn't answer, it's closed. */
+    fun requestState() {
+        if (_status.value == LinkStatus.APP_CLOSED) _status.value = LinkStatus.CONNECTING
+        send(Protocol.Cmd.REQUEST_STATE)
+    }
+
+    /**
+     * After a command that always makes the phone app send its state back, expect it soon. No
+     * answer means the app isn't running anymore (a force-stopped app can't say goodbye).
+     */
+    private fun expectAnswer() {
+        val askedAt = SystemClock.elapsedRealtime()
+        answerWatch?.cancel()
+        answerWatch = scope.launch {
+            delay(ANSWER_TIMEOUT_MS)
+            if (lastStateAt < askedAt && _status.value != LinkStatus.NO_PHONE) appClosed()
         }
+    }
+
+    private fun appClosed() {
+        _status.value = LinkStatus.APP_CLOSED
+        _nowPlaying.value = null
     }
 
     fun stop() {
@@ -357,6 +377,7 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
     }
 
     private fun send(cmd: String) {
+        if (cmd in ANSWERED_COMMANDS) expectAnswer()
         scope.launch { sendTo(Protocol.PATH_CMD, cmd) }
     }
 
@@ -384,8 +405,8 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
             if (event.dataItem.uri.path != Protocol.PATH_NOW_PLAYING) return@forEach
             when (event.type) {
                 DataEvent.TYPE_CHANGED -> applyNowPlaying(DataMapItem.fromDataItem(event.dataItem).dataMap)
-                // The phone app cleared its state: nothing is playing.
-                DataEvent.TYPE_DELETED -> _nowPlaying.value = null
+                // The phone app closed and cleared its state.
+                DataEvent.TYPE_DELETED -> appClosed()
             }
         }
     }
@@ -549,6 +570,7 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
 
     private fun applyNowPlaying(map: DataMap) {
         _status.value = LinkStatus.CONNECTED
+        lastStateAt = SystemClock.elapsedRealtime()
         val np = NowPlaying(
             title = map.getString(Protocol.Key.TITLE, ""),
             artist = map.getString(Protocol.Key.ARTIST, ""),
@@ -653,6 +675,12 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
         const val QUEUE_PAGE_SIZE = 40
         const val LIBRARY_PAGE_SIZE = 50
         private const val VOLUME_HOLD_MS = 1_500L
+        private const val ANSWER_TIMEOUT_MS = 4_000L
+
+        /** Commands the phone app always answers with a fresh state. */
+        private val ANSWERED_COMMANDS = setOf(
+            Protocol.Cmd.REQUEST_STATE, Protocol.Cmd.TOGGLE, Protocol.Cmd.NEXT, Protocol.Cmd.PREVIOUS,
+        )
         private const val MAX_THUMBNAILS = 250
     }
 }

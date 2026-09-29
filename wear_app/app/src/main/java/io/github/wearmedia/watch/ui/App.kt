@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +63,7 @@ fun WearApp(link: PhoneLink, settings: WearSettings) {
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         val np = nowPlaying
         if (np == null) {
-            WaitingScreen(status)
+            WaitingScreen(status, onRetry = link::requestState)
             return@Box
         }
 
@@ -187,16 +188,25 @@ fun WearApp(link: PhoneLink, settings: WearSettings) {
 }
 
 @Composable
-private fun WaitingScreen(status: LinkStatus) {
+private fun WaitingScreen(status: LinkStatus, onRetry: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(28.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = onRetry)
+            .padding(28.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(Icons.Rounded.PhoneAndroid, size = 36.dp, tint = WearColors.accent)
         Spacer(Modifier.height(10.dp))
         BasicText(
-            text = stringResource(if (status == LinkStatus.CONNECTED) R.string.nothing_playing else R.string.not_connected),
+            text = stringResource(
+                when (status) {
+                    LinkStatus.CONNECTED -> R.string.nothing_playing
+                    LinkStatus.CONNECTING -> R.string.connecting
+                    else -> R.string.not_connected
+                },
+            ),
             style = WearText.body.copy(textAlign = TextAlign.Center),
         )
         if (status == LinkStatus.CONNECTING) {

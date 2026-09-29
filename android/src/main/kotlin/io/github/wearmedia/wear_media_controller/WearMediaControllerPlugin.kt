@@ -77,6 +77,10 @@ class WearMediaControllerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        // The app is going away: tell the watch nothing is playing here anymore.
+        Wearable.getDataClient(context).deleteDataItems(
+            Uri.Builder().scheme(PutDataRequest.WEAR_URI_SCHEME).path(PATH_STATE).build()
+        )
         Wearable.getMessageClient(context).removeListener(messageListener)
         audioManager.unregisterAudioDeviceCallback(deviceCallback)
         channel.setMethodCallHandler(null)

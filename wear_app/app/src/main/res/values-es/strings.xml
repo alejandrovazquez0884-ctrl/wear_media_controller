@@ -2,6 +2,7 @@
 <resources>
     <string name="queue_title">Fila de reproducción</string>
     <string name="not_connected">Abre la app de música en tu teléfono</string>
+    <string name="connecting">Conectando…</string>
     <string name="nothing_playing">Nada en reproducción</string>
     <string name="no_lyrics">Sin letra</string>
     <string name="now_playing">Reproduciendo %1$s</string>

@@ -11,13 +11,18 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.wearmedia.watch.ui.WearApp
 
-/** Keeps the link (and its cached state, like lyrics) alive when the activity is recreated. */
+/**
+ * The link lives as long as the process, not the screen: leaving the app and coming back shows
+ * what's playing right away (with its artwork and lyrics) instead of asking the phone again.
+ */
 class LinkViewModel(app: Application) : AndroidViewModel(app) {
-    val link = PhoneLink(app)
+    val link = sharedLink(app)
     val settings = WearSettings(app)
 
-    override fun onCleared() {
-        link.close()
+    private companion object {
+        private var link: PhoneLink? = null
+
+        fun sharedLink(app: Application): PhoneLink = link ?: PhoneLink(app).also { link = it }
     }
 }
 

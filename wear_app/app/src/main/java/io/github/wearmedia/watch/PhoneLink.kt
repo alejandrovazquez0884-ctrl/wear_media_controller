@@ -201,9 +201,26 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
     fun start() {
         dataClient.addListener(this)
         messageClient.addListener(this)
-        // No cached state: it may be from an app that was force-stopped since. Only what the
-        // phone app answers now is shown ("connecting" until then).
-        requestState()
+        scope.launch {
+            // What the phone last published, if it's still believable: something that was playing
+            // and wouldn't have ended yet. Anything else waits for the phone ("connecting").
+            if (_nowPlaying.value == null) {
+                try {
+                    val items = dataClient.dataItems.await()
+                    items.forEach { item ->
+                        if (item.uri.path != Protocol.PATH_NOW_PLAYING) return@forEach
+                        val map = DataMapItem.fromDataItem(item).dataMap
+                        val age = System.currentTimeMillis() - map.getLong(Protocol.Key.STAMP)
+                        val left = map.getLong(Protocol.Key.DURATION) - map.getLong(Protocol.Key.POSITION)
+                        if (map.getBoolean(Protocol.Key.PLAYING) && age in 0 until left) applyNowPlaying(map, age)
+                    }
+                    items.release()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to read cached state", e)
+                }
+            }
+            requestState()
+        }
     }
 
     /** Asks the phone app for its state; if it doesn't answer, it's closed. */
@@ -568,7 +585,8 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
         }
     }
 
-    private fun applyNowPlaying(map: DataMap) {
+    /** [ageMs]: how long ago the phone published [map] (for a cached state; 0 when it just arrived). */
+    private fun applyNowPlaying(map: DataMap, ageMs: Long = 0L) {
         _status.value = LinkStatus.CONNECTED
         lastStateAt = SystemClock.elapsedRealtime()
         val np = NowPlaying(
@@ -578,7 +596,7 @@ class PhoneLink(context: Context) : DataClient.OnDataChangedListener, MessageCli
             isFavourite = map.getBoolean(Protocol.Key.FAVOURITE),
             durationMs = map.getLong(Protocol.Key.DURATION),
             positionMs = map.getLong(Protocol.Key.POSITION),
-            positionAt = SystemClock.elapsedRealtime(),
+            positionAt = SystemClock.elapsedRealtime() - ageMs,
             index = map.getInt(Protocol.Key.INDEX),
             queueLength = map.getInt(Protocol.Key.QUEUE_LENGTH),
             queueVersion = map.getLong(Protocol.Key.QUEUE_VERSION),
